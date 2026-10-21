@@ -91,7 +91,7 @@ commit credentials or recipient information.
 
 ## Contributing
 
-Contributions are welcome. Fork the
-[GitHub repository](https://github.com/Akotur2005/rodent_alert_system), create
-a branch for your changes, and open a pull request with a description of the
-updates.
+Contributions are welcome! Start by visiting the
+[rodent_alert_system repository on GitHub](https://github.com/Akotur2005/rodent_alert_system).
+Fork this repository, create a branch for your changes, and open a pull request
+with a description of the updates.
