@@ -654,6 +654,29 @@ body {
   overflow: hidden;
 }
 
+.contacts-modal {
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.contacts-modal .modal-header,
+.contacts-modal .modal-footer {
+  flex-shrink: 0;
+}
+
+.contacts-modal form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.contacts-modal .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);

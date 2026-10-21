@@ -414,7 +414,7 @@ export default function App() {
               setEditTwilioAccountSid(contacts.twilio_account_sid || '');
               setEditTwilioAuthToken('');
               setEditWhatsappPhone(contacts.whatsapp_phone || '');
-              setEditTwilioWhatsappFrom(contacts.twilio_whatsapp_from || '');
+              setEditTwilioWhatsappFrom(contacts.twilio_whatsapp_from || 'whatsapp:+14155238886');
               setIsEditModalOpen(true);
             }}
             className="btn btn-outline btn-sm"
@@ -888,7 +888,7 @@ export default function App() {
       {/* Pre-defined Contact Configuration Modal */}
       {isEditModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-dialog">
+          <div className="modal-dialog contacts-modal">
             <div className="modal-header">
               <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Edit Pre-defined Alarm Contacts</h3>
               <button
@@ -908,7 +908,7 @@ export default function App() {
             <form onSubmit={handleSaveContacts}>
               <div className="modal-body">
                 <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>
-                  Update your contact details and Gmail credentials below. Settings are saved permanently to <code>alert_config.json</code> and apply instantly.
+                  Update your contact details and alert credentials below. Scroll this panel to reach all settings. Settings are saved to the local <code>alert_config.json</code> file.
                 </p>
 
                 <div className="form-group">
