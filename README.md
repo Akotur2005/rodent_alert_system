@@ -88,32 +88,33 @@ Copy `alert_config.example.json` to `alert_config.json` and fill in the
 credentials for the alert channels you want to enable. Keep this local file
 private; it and the detection history are excluded from Git.
 
-### Receive Free Telegram Alerts
+### Receive Text Message (SMS) Alerts
 
-Telegram bots can message you for free. This project sends alerts through the
-official Telegram Bot API; you need a Telegram account and internet access.
+The project sends SMS through Twilio. SMS is not WhatsApp, and Twilio may
+charge for sending messages; trial accounts may only send to verified numbers.
+WhatsApp delivery is not currently supported by this project.
 
-1. Start the Python backend with `python server.py`, then start the web app
-   with `npm run dev`.
-2. In Telegram, open [@BotFather](https://t.me/BotFather), send `/newbot`, and
-   follow the prompts. Copy the bot token it gives you.
-3. Open your new bot using its username and press **Start** or send it a
-   message.
-4. To find your chat ID, open
-   `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates` in a browser,
-   replacing `<YOUR_BOT_TOKEN>` with your token. Find `message.chat.id` in the
-   JSON response. Keep this URL private because it contains your bot token.
-5. In RodentSentinel, choose **Edit Contacts**. Enter the chat ID and bot token
-   in the Telegram fields, then select **Save & Apply Now**. The token is saved
-   in local `alert_config.json`, excluded from Git, and never returned by the
-   backend config API.
-6. Select **Test Telegram Alert** to verify delivery, or scan an image that
-   contains a rodent in **Image Inspector**.
+1. Create a Twilio account and get an SMS-capable Twilio sender number. Copy
+   your Account SID and Auth Token from the Twilio Console.
+2. Copy `alert_config.example.json` to `alert_config.json` in the project
+   folder. Fill in `to_phone` with the mobile number that should receive alerts
+   (international format, such as `+15551234567`), and set
+   `twilio_account_sid`, `twilio_auth_token`, and `twilio_from_phone` to your
+   Twilio credentials and sender number.
+3. Keep `alert_config.json` private. It is excluded from Git; never commit or
+   share your Twilio Auth Token.
+4. Start the Python backend with `python server.py`, then start the web app
+   with `npm run dev`. In the app, choose **Edit Contacts**, enter the same
+   destination in **Receiving Phone Number (for SMS)**, and save.
+5. To test SMS, use PowerShell while the backend is running:
 
-If `getUpdates` has no messages, send another message to your bot and refresh
-the URL. A Telegram bot cannot start a private conversation until you start
-it first. The phone number field is for optional SMS via Twilio; it is not
-needed for Telegram.
+   ```powershell
+   Invoke-RestMethod -Method Post -Uri http://localhost:5001/api/test-alert
+   ```
+
+   This endpoint also attempts the configured email and Telegram alerts. Check
+   the returned `sms.status`: `sent` means Twilio accepted the SMS; `simulated`
+   means credentials or the sender number are missing, so no text was sent.
 
 ## Contributing
 
