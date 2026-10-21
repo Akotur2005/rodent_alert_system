@@ -42,8 +42,8 @@ def load_alert_config():
         "twilio_account_sid": "",
         "twilio_auth_token": "",
         "twilio_from_phone": "",
-        "telegram_bot_token": "",
-        "telegram_chat_id": "",
+        "whatsapp_phone": "",
+        "twilio_whatsapp_from": "",
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -284,62 +284,69 @@ def send_sms_alert(phone_number, incident_data):
         }
 
 
-def send_telegram_alert(incident_data):
+def send_twilio_whatsapp_alert(incident_data):
     cfg = load_alert_config()
     timestamp = incident_data.get("timestamp", datetime.now().strftime("%H:%M:%S"))
     confidence = incident_data.get("confidence", 0)
     count = incident_data.get("count", 1)
 
-    bot_token = str(cfg.get("telegram_bot_token", "")).strip()
-    chat_id = str(cfg.get("telegram_chat_id", "")).strip()
-    if not bot_token or not chat_id:
+    sid = str(cfg.get("twilio_account_sid", "")).strip()
+    token = str(cfg.get("twilio_auth_token", "")).strip()
+    recipient = str(cfg.get("whatsapp_phone", "")).strip()
+    sender = str(cfg.get("twilio_whatsapp_from", "")).strip()
+    if not sid or not token or not recipient or not sender:
         return {
             "status": "not_configured",
-            "detail": "Configure a Telegram bot token and chat ID in Edit Contacts."
+            "detail": "Configure Twilio credentials, a WhatsApp sender, and recipient number."
         }
 
-    import urllib.error
-    import urllib.request
+    recipient = recipient.replace(" ", "").replace("-", "")
+    sender = sender.replace(" ", "").replace("-", "")
+    if not recipient.startswith("whatsapp:"):
+        recipient = f"whatsapp:{recipient}"
+    if not sender.startswith("whatsapp:"):
+        sender = f"whatsapp:{sender}"
 
     message = (
-        "🚨 RODENT ALERT SENTINEL\n\n"
-        "Status: Rodent detected!\n"
-        f"Count: {count}\n"
-        f"Confidence: {confidence}%\n"
-        f"Time: {timestamp}\n\n"
-        "Immediate inspection advised."
+        f"RODENT ALERT: {count} rodent(s) detected with {confidence}% "
+        f"confidence at {timestamp}. Immediate check advised."
     )
-    payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
-    telegram_request = urllib.request.Request(
-        f"https://api.telegram.org/bot{bot_token}/sendMessage",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
+    payload = urllib.parse.urlencode({
+        "To": recipient,
+        "From": sender,
+        "Body": message,
+    }).encode("utf-8")
+    whatsapp_request = urllib.request.Request(url, data=payload)
+    auth = base64.b64encode(f"{sid}:{token}".encode("utf-8")).decode("ascii")
+    whatsapp_request.add_header("Authorization", f"Basic {auth}")
 
     try:
-        with urllib.request.urlopen(telegram_request, timeout=12) as response:
+        with urllib.request.urlopen(whatsapp_request, timeout=12) as response:
             result = json.loads(response.read().decode("utf-8"))
-        if result.get("ok"):
-            return {"status": "sent", "detail": "Telegram alert sent."}
         return {
-            "status": "error",
-            "detail": result.get("description", "Telegram rejected the alert."),
+            "status": "sent",
+            "detail": f"WhatsApp message accepted by Twilio for {recipient}.",
+            "message_sid": result.get("sid", ""),
         }
     except urllib.error.HTTPError as error:
         try:
             result = json.loads(error.read().decode("utf-8"))
-            detail = result.get("description", "Telegram rejected the alert.")
+            detail = result.get("message", "Twilio rejected the WhatsApp message.")
         except (json.JSONDecodeError, UnicodeDecodeError):
-            detail = "Telegram rejected the alert. Check the bot token and chat ID."
+            detail = "Twilio rejected the WhatsApp message. Check sender, recipient, and credentials."
         return {"status": "error", "detail": detail}
     except (urllib.error.URLError, TimeoutError, OSError):
         return {
             "status": "error",
-            "detail": "Could not reach Telegram. Check the backend network connection.",
+            "detail": "Could not reach Twilio. Check the backend network connection.",
         }
     except json.JSONDecodeError:
-        return {"status": "error", "detail": "Telegram returned an invalid response."}
+        return {"status": "error", "detail": "Twilio returned an invalid response."}
 
 
 # ==============================================================================
@@ -366,8 +373,13 @@ def health():
         "classes": list(model.names.values()),
         "configured_email": cfg.get("to_email", ""),
         "configured_phone": cfg.get("to_phone", ""),
-        "telegram_chat_id": cfg.get("telegram_chat_id", ""),
-        "has_telegram_bot_token": bool(cfg.get("telegram_bot_token"))
+        "whatsapp_phone": cfg.get("whatsapp_phone", ""),
+        "whatsapp_configured": bool(
+            cfg.get("twilio_account_sid")
+            and cfg.get("twilio_auth_token")
+            and cfg.get("whatsapp_phone")
+            and cfg.get("twilio_whatsapp_from")
+        )
     })
 
 
@@ -377,25 +389,24 @@ def config_route():
     ALERT_CONFIG = load_alert_config()
     if request.method == "POST":
         data = request.json or {}
-        for key in ["to_email", "to_phone", "smtp_user", "smtp_server", "smtp_port", "twilio_account_sid", "twilio_auth_token", "twilio_from_phone", "telegram_chat_id"]:
+        for key in ["to_email", "to_phone", "smtp_user", "smtp_server", "smtp_port", "twilio_account_sid", "twilio_from_phone", "twilio_whatsapp_from", "whatsapp_phone"]:
             if key in data and data[key] is not None:
                 ALERT_CONFIG[key] = data[key]
-        if data.get("telegram_bot_token"):
-            ALERT_CONFIG["telegram_bot_token"] = data["telegram_bot_token"]
+        if data.get("twilio_auth_token"):
+            ALERT_CONFIG["twilio_auth_token"] = data["twilio_auth_token"]
         if data.get("smtp_password"):
             ALERT_CONFIG["smtp_password"] = data["smtp_password"]
         if "smtp_user" in ALERT_CONFIG and ALERT_CONFIG["smtp_user"]:
             ALERT_CONFIG["from_email"] = f"Rodent Sentinel System <{ALERT_CONFIG['smtp_user']}>"
-        ALERT_CONFIG.pop("whatsapp_apikey", None)
-        ALERT_CONFIG.pop("whatsapp_phone", None)
-        ALERT_CONFIG.pop("whatsapp_enabled", None)
+        ALERT_CONFIG.pop("telegram_bot_token", None)
+        ALERT_CONFIG.pop("telegram_chat_id", None)
 
         save_alert_config(ALERT_CONFIG)
         print(
             f"[Config Saved ✅] Alert Email: {ALERT_CONFIG['to_email']}, "
             f"Sender: {ALERT_CONFIG.get('smtp_user')}, SMS phone: {ALERT_CONFIG['to_phone']}, "
-            "Telegram configured: "
-            f"{bool(ALERT_CONFIG.get('telegram_bot_token') and ALERT_CONFIG.get('telegram_chat_id'))}"
+            "WhatsApp configured: "
+            f"{bool(ALERT_CONFIG.get('twilio_auth_token') and ALERT_CONFIG.get('whatsapp_phone') and ALERT_CONFIG.get('twilio_whatsapp_from'))}"
         )
         return jsonify({
             "status": "updated",
@@ -407,8 +418,16 @@ def config_route():
                 "smtp_configured": bool(ALERT_CONFIG.get("smtp_user") and ALERT_CONFIG.get("smtp_password")),
                 "sms_configured": bool(ALERT_CONFIG.get("twilio_account_sid") and ALERT_CONFIG.get("twilio_auth_token")),
                 "twilio_from_phone": ALERT_CONFIG.get("twilio_from_phone", ""),
-                "telegram_chat_id": ALERT_CONFIG.get("telegram_chat_id", ""),
-                "has_telegram_bot_token": bool(ALERT_CONFIG.get("telegram_bot_token"))
+                "twilio_account_sid": ALERT_CONFIG.get("twilio_account_sid", ""),
+                "has_twilio_auth_token": bool(ALERT_CONFIG.get("twilio_auth_token")),
+                "whatsapp_phone": ALERT_CONFIG.get("whatsapp_phone", ""),
+                "twilio_whatsapp_from": ALERT_CONFIG.get("twilio_whatsapp_from", ""),
+                "whatsapp_configured": bool(
+                    ALERT_CONFIG.get("twilio_account_sid")
+                    and ALERT_CONFIG.get("twilio_auth_token")
+                    and ALERT_CONFIG.get("whatsapp_phone")
+                    and ALERT_CONFIG.get("twilio_whatsapp_from")
+                )
             }
         })
 
@@ -420,14 +439,22 @@ def config_route():
         "smtp_configured": bool(ALERT_CONFIG.get("smtp_user") and ALERT_CONFIG.get("smtp_password")),
         "sms_configured": bool(ALERT_CONFIG.get("twilio_account_sid") and ALERT_CONFIG.get("twilio_auth_token")),
         "twilio_from_phone": ALERT_CONFIG.get("twilio_from_phone", ""),
-        "telegram_chat_id": ALERT_CONFIG.get("telegram_chat_id", ""),
-        "has_telegram_bot_token": bool(ALERT_CONFIG.get("telegram_bot_token"))
+        "twilio_account_sid": ALERT_CONFIG.get("twilio_account_sid", ""),
+        "has_twilio_auth_token": bool(ALERT_CONFIG.get("twilio_auth_token")),
+        "whatsapp_phone": ALERT_CONFIG.get("whatsapp_phone", ""),
+        "twilio_whatsapp_from": ALERT_CONFIG.get("twilio_whatsapp_from", ""),
+        "whatsapp_configured": bool(
+            ALERT_CONFIG.get("twilio_account_sid")
+            and ALERT_CONFIG.get("twilio_auth_token")
+            and ALERT_CONFIG.get("whatsapp_phone")
+            and ALERT_CONFIG.get("twilio_whatsapp_from")
+        )
     })
 
 
 @app.route("/api/test-alert", methods=["POST"])
 def test_alert():
-    """Manual button to trigger configured email, SMS, and Telegram test alerts."""
+    """Manual button to trigger configured email, SMS, and WhatsApp test alerts."""
     cfg = load_alert_config()
     test_incident = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -437,35 +464,35 @@ def test_alert():
     }
     email_res = send_email_alert(cfg["to_email"], test_incident)
     sms_res = send_sms_alert(cfg["to_phone"], test_incident)
-    telegram_res = send_telegram_alert(test_incident)
+    whatsapp_res = send_twilio_whatsapp_alert(test_incident)
 
     return jsonify({
         "status": "success",
         "message": "Test alerts dispatched",
         "email": email_res,
         "sms": sms_res,
-        "telegram": telegram_res,
+        "whatsapp": whatsapp_res,
         "target_email": cfg["to_email"],
         "target_phone": cfg["to_phone"],
-        "target_telegram_chat_id": cfg.get("telegram_chat_id", "")
+        "target_whatsapp_phone": cfg.get("whatsapp_phone", "")
     })
 
 
-@app.route("/api/test-telegram", methods=["POST"])
-def test_telegram():
-    """Send a test Telegram message without triggering other alert channels."""
-    result = send_telegram_alert({
+@app.route("/api/test-whatsapp", methods=["POST"])
+def test_whatsapp():
+    """Send a test WhatsApp message without triggering other alert channels."""
+    result = send_twilio_whatsapp_alert({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "confidence": 98.5,
-        "source": "Manual Telegram Test",
+        "source": "Manual WhatsApp Test",
         "count": 1,
     })
-    return jsonify({"telegram": result}), 200 if result["status"] == "sent" else 502
+    return jsonify({"whatsapp": result}), 200 if result["status"] == "sent" else 502
 
 
 @app.route("/api/test-email", methods=["POST"])
 def test_email():
-    """Send a test email without triggering other alert channels."""
+    """Send a test email without triggering SMS or WhatsApp."""
     cfg = load_alert_config()
     test_incident = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -597,17 +624,17 @@ def detect_route():
             "alarm_sent_to": {
                 "email": cfg.get("to_email", ""),
                 "phone": cfg.get("to_phone", ""),
-                "telegram_chat_id": cfg.get("telegram_chat_id", "")
+                "whatsapp_phone": cfg.get("whatsapp_phone", "")
             }
         }
 
         # Trigger alarms
         email_result = send_email_alert(cfg.get("to_email", ""), incident)
         sms_result = send_sms_alert(cfg.get("to_phone", ""), incident)
-        telegram_result = send_telegram_alert(incident)
+        whatsapp_result = send_twilio_whatsapp_alert(incident)
         incident["email_result"] = email_result
         incident["sms_result"] = sms_result
-        incident["telegram_result"] = telegram_result
+        incident["whatsapp_result"] = whatsapp_result
 
         # Save to history
         detection_history.insert(0, incident)
@@ -624,10 +651,10 @@ def detect_route():
             "alarm_status": {
                 "email": email_result,
                 "sms": sms_result,
-                "telegram": telegram_result,
+                "whatsapp": whatsapp_result,
                 "sent_to_email": cfg.get("to_email", ""),
                 "sent_to_phone": cfg.get("to_phone", ""),
-                "sent_to_telegram_chat_id": cfg.get("telegram_chat_id", "")
+                "sent_to_whatsapp": cfg.get("whatsapp_phone", "")
             }
         })
     else:

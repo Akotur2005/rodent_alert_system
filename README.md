@@ -88,33 +88,39 @@ Copy `alert_config.example.json` to `alert_config.json` and fill in the
 credentials for the alert channels you want to enable. Keep this local file
 private; it and the detection history are excluded from Git.
 
-### Receive Text Message (SMS) Alerts
+### Receive WhatsApp Alerts with Twilio
 
-The project sends SMS through Twilio. SMS is not WhatsApp, and Twilio may
-charge for sending messages; trial accounts may only send to verified numbers.
-WhatsApp delivery is not currently supported by this project.
+The project can send WhatsApp rodent alerts through Twilio's WhatsApp Sandbox
+for testing. Twilio charges for WhatsApp messages; free trial accounts have
+limited trial units. The Sandbox is for testing only, and Twilio requires an
+approved message template for business-initiated messages outside the
+24-hour customer-service window. The current project sends plain-text alerts,
+so test within that window. For production use, connect an approved WhatsApp
+sender and add approved template support.
 
-1. Create a Twilio account and get an SMS-capable Twilio sender number. Copy
-   your Account SID and Auth Token from the Twilio Console.
-2. Copy `alert_config.example.json` to `alert_config.json` in the project
-   folder. Fill in `to_phone` with the mobile number that should receive alerts
-   (international format, such as `+15551234567`), and set
-   `twilio_account_sid`, `twilio_auth_token`, and `twilio_from_phone` to your
-   Twilio credentials and sender number.
-3. Keep `alert_config.json` private. It is excluded from Git; never commit or
-   share your Twilio Auth Token.
-4. Start the Python backend with `python server.py`, then start the web app
-   with `npm run dev`. In the app, choose **Edit Contacts**, enter the same
-   destination in **Receiving Phone Number (for SMS)**, and save.
-5. To test SMS, use PowerShell while the backend is running:
+1. Create a [Twilio account](https://www.twilio.com/try-twilio) and open the
+   [WhatsApp Sandbox setup](https://www.twilio.com/console/sms/whatsapp/sandbox).
+   Follow the Console instructions to activate the Sandbox.
+2. In WhatsApp, send the Sandbox's displayed `join <your sandbox code>` message
+   to **+1 415 523 8886**. Each recipient must join the Sandbox. Join access
+   expires after three days; send the join code again to rejoin.
+3. In the Twilio Console, copy your Account SID and Auth Token. In RodentSentinel,
+   choose **Edit Contacts** and set:
+   - **WhatsApp Recipient Number**: your WhatsApp number in international
+     format, such as `+15551234567`.
+   - **Twilio Account SID** and **Twilio Auth Token**: your Twilio credentials.
+   - **Twilio WhatsApp Sender**: `whatsapp:+14155238886` for the Sandbox.
+4. Choose **Save & Apply Now**, then **Test WhatsApp Alert**. The recipient must
+   have joined the same Sandbox. If testing fails, check the returned Twilio
+   error and your Twilio Console message logs.
 
-   ```powershell
-   Invoke-RestMethod -Method Post -Uri http://localhost:5001/api/test-alert
-   ```
+Twilio credentials and recipient settings are stored in the local
+`alert_config.json`, which is excluded from Git. Never commit or share your
+Twilio Auth Token.
 
-   This endpoint also attempts the configured email and Telegram alerts. Check
-   the returned `sms.status`: `sent` means Twilio accepted the SMS; `simulated`
-   means credentials or the sender number are missing, so no text was sent.
+To receive **SMS** instead, configure the separate `to_phone` and
+`twilio_from_phone` settings with an SMS-capable Twilio sender; SMS and WhatsApp
+use different sender addresses.
 
 ## Contributing
 

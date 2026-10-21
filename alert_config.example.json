@@ -11,6 +11,6 @@
   "twilio_account_sid": "",
   "twilio_auth_token": "",
   "twilio_from_phone": "",
-  "telegram_bot_token": "",
-  "telegram_chat_id": ""
+  "whatsapp_phone": "",
+  "twilio_whatsapp_from": "whatsapp:+14155238886"
 }

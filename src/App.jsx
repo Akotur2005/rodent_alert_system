@@ -57,16 +57,21 @@ export default function App() {
     has_smtp_password: false,
     smtp_configured: false,
     sms_configured: false,
-    telegram_chat_id: '',
-    has_telegram_bot_token: false
+    twilio_account_sid: '',
+    has_twilio_auth_token: false,
+    whatsapp_phone: '',
+    twilio_whatsapp_from: '',
+    whatsapp_configured: false
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editSmtpUser, setEditSmtpUser] = useState('');
   const [editSmtpPassword, setEditSmtpPassword] = useState('');
-  const [editTelegramBotToken, setEditTelegramBotToken] = useState('');
-  const [editTelegramChatId, setEditTelegramChatId] = useState('');
+  const [editTwilioAccountSid, setEditTwilioAccountSid] = useState('');
+  const [editTwilioAuthToken, setEditTwilioAuthToken] = useState('');
+  const [editWhatsappPhone, setEditWhatsappPhone] = useState('');
+  const [editTwilioWhatsappFrom, setEditTwilioWhatsappFrom] = useState('');
   const [alertNotice, setAlertNotice] = useState(null);
 
   // Fetch initial data
@@ -127,7 +132,7 @@ export default function App() {
 
         if (data.alarm_status) {
           const em = data.alarm_status.email;
-          const telegram = data.alarm_status.telegram;
+          const whatsapp = data.alarm_status.whatsapp;
           const sms = data.alarm_status.sms;
           let bannerMsg = `🚨 RODENT DETECTED! Siren Sounding! `;
           if (em?.status === 'sent') {
@@ -135,10 +140,10 @@ export default function App() {
           } else if (em?.status === 'error') {
             bannerMsg += `⚠️ Email error: ${em.detail} `;
           }
-          if (telegram?.status === 'sent') {
-            bannerMsg += `✅ Telegram alert delivered! `;
-          } else if (telegram?.status === 'error') {
-            bannerMsg += `⚠️ Telegram error: ${telegram.detail} `;
+          if (whatsapp?.status === 'sent') {
+            bannerMsg += `✅ WhatsApp alert sent! `;
+          } else if (whatsapp?.status === 'error') {
+            bannerMsg += `⚠️ WhatsApp error: ${whatsapp.detail} `;
           }
           if (sms?.status === 'sent') {
             bannerMsg += `✅ SMS sent to ${data.alarm_status.sent_to_phone}!`;
@@ -303,17 +308,17 @@ export default function App() {
     }
   };
 
-  const handleTestTelegram = async () => {
+  const handleTestWhatsApp = async () => {
     try {
-      const res = await fetch('/api/test-telegram', { method: 'POST' });
+      const res = await fetch('/api/test-whatsapp', { method: 'POST' });
       const data = await res.json();
-      const msg = data.telegram?.status === 'sent'
-        ? '✅ Test Telegram message sent.'
-        : `⚠️ Telegram test failed: ${data.telegram?.detail || 'Check the bot token, chat ID, and backend logs.'}`;
+      const msg = data.whatsapp?.status === 'sent'
+        ? '✅ Test WhatsApp message accepted by Twilio.'
+        : `⚠️ WhatsApp test failed: ${data.whatsapp?.detail || 'Check Twilio credentials, sender, recipient, and backend logs.'}`;
       setAlertNotice(msg);
       setTimeout(() => setAlertNotice(null), 8000);
     } catch (err) {
-      alert('Failed to test Telegram alert: ' + err.message);
+      alert('Failed to test WhatsApp alert: ' + err.message);
     }
   };
 
@@ -329,15 +334,17 @@ export default function App() {
           to_phone: editPhone,
           smtp_user: editSmtpUser,
           smtp_password: editSmtpPassword,
-          telegram_chat_id: editTelegramChatId,
-          telegram_bot_token: editTelegramBotToken
+          twilio_account_sid: editTwilioAccountSid,
+          twilio_auth_token: editTwilioAuthToken,
+          whatsapp_phone: editWhatsappPhone,
+          twilio_whatsapp_from: editTwilioWhatsappFrom
         })
       });
       if (res.ok) {
         const resData = await res.json();
         setContacts((prev) => ({ ...prev, ...resData.config }));
         setIsEditModalOpen(false);
-        setAlertNotice('✅ Alert configuration saved! Email, phone & Telegram settings updated.');
+        setAlertNotice('✅ Alert configuration saved! Email, phone & Twilio WhatsApp settings updated.');
         setTimeout(() => setAlertNotice(null), 4500);
       }
     } catch (err) {
@@ -404,8 +411,10 @@ export default function App() {
               setEditPhone(contacts.to_phone || '');
               setEditSmtpUser(contacts.smtp_user || contacts.to_email || '');
               setEditSmtpPassword('');
-              setEditTelegramChatId(contacts.telegram_chat_id || '');
-              setEditTelegramBotToken('');
+              setEditTwilioAccountSid(contacts.twilio_account_sid || '');
+              setEditTwilioAuthToken('');
+              setEditWhatsappPhone(contacts.whatsapp_phone || '');
+              setEditTwilioWhatsappFrom(contacts.twilio_whatsapp_from || '');
               setIsEditModalOpen(true);
             }}
             className="btn btn-outline btn-sm"
@@ -434,9 +443,9 @@ export default function App() {
             Test Email Alert
           </button>
 
-          <button onClick={handleTestTelegram} className="btn btn-primary btn-sm">
+          <button onClick={handleTestWhatsApp} className="btn btn-primary btn-sm">
             <Bell size={13} />
-            Test Telegram Alert
+            Test WhatsApp Alert
           </button>
         </div>
       </div>
@@ -958,43 +967,65 @@ export default function App() {
 
                 <div style={{ margin: '16px 0', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
                   <h4 style={{ fontSize: '0.9rem', color: '#1e293b', marginBottom: '8px' }}>
-                    ✈️ Free Telegram Alerts
+                    WhatsApp Alerts with Twilio
                   </h4>
                   <div style={{ fontSize: '0.8rem', color: '#334155', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
                     <ol style={{ margin: '6px 0 0 18px', padding: 0 }}>
-                      <li>In Telegram, message <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">BotFather</a>, send <code>/newbot</code>, and follow its instructions. Copy the bot token it gives you.</li>
-                      <li>Open your new bot and press <strong>Start</strong> or send it a message.</li>
-                      <li>Open <code>https://api.telegram.org/bot&lt;YOUR_BOT_TOKEN&gt;/getUpdates</code> in a browser, replacing the placeholder with your token. Find <code>message.chat.id</code> in the response. Keep your token private and do not share that URL.</li>
-                      <li>Enter the chat ID and bot token below, then save. Use <strong>Test Telegram Alert</strong> to verify delivery.</li>
+                      <li>Activate the <a href="https://www.twilio.com/console/sms/whatsapp/sandbox" target="_blank" rel="noopener noreferrer">Twilio WhatsApp Sandbox</a>. Follow its join instructions and send its <code>join ...</code> code to <strong>+1 415 523 8886</strong> from your WhatsApp account.</li>
+                      <li>The Sandbox is for testing only. Your WhatsApp number must join the Sandbox; join access expires after three days.</li>
+                      <li>Enter your recipient number, Twilio Account SID and Auth Token, and sender. For the Sandbox, sender is <code>whatsapp:+14155238886</code>.</li>
+                      <li>Save settings and use <strong>Test WhatsApp Alert</strong>. Test within 24 hours after joining; outside that window, WhatsApp requires an approved message template.</li>
                     </ol>
                   </div>
 
                   <div className="form-group">
-                    <label>Telegram Chat ID</label>
+                    <label>WhatsApp Recipient Number (with country code)</label>
                     <input
-                      type="text"
-                      value={editTelegramChatId}
-                      onChange={(e) => setEditTelegramChatId(e.target.value)}
+                      type="tel"
+                      value={editWhatsappPhone}
+                      onChange={(e) => setEditWhatsappPhone(e.target.value)}
                       className="form-control"
-                      placeholder="e.g. 123456789"
+                      placeholder="e.g. +15551234567"
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>Telegram Bot Token</label>
+                    <label>Twilio Account SID</label>
+                    <input
+                      type="text"
+                      value={editTwilioAccountSid}
+                      onChange={(e) => setEditTwilioAccountSid(e.target.value)}
+                      className="form-control"
+                      placeholder="AC..."
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Twilio Auth Token</label>
                     <input
                       type="password"
-                      value={editTelegramBotToken}
-                      onChange={(e) => setEditTelegramBotToken(e.target.value)}
+                      value={editTwilioAuthToken}
+                      onChange={(e) => setEditTwilioAuthToken(e.target.value)}
                       className="form-control"
-                      placeholder={contacts.has_telegram_bot_token ? 'Saved; leave blank to keep current token' : 'Paste the token from BotFather'}
+                      placeholder={contacts.has_twilio_auth_token ? 'Saved; leave blank to keep current token' : 'Paste your Twilio Auth Token'}
                       autoComplete="new-password"
                     />
                     <small style={{ color: '#64748b', fontSize: '0.78rem' }}>
-                      {contacts.has_telegram_bot_token
-                        ? 'A bot token is already saved. Leave this blank to keep it.'
-                        : 'The token is saved only in the local backend config and is not returned to the browser.'}
+                      {contacts.has_twilio_auth_token
+                        ? 'A token is already saved. Leave this blank to keep it.'
+                        : 'Stored only in the local backend config; never commit or share it.'}
                     </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Twilio WhatsApp Sender</label>
+                    <input
+                      type="text"
+                      value={editTwilioWhatsappFrom}
+                      onChange={(e) => setEditTwilioWhatsappFrom(e.target.value)}
+                      className="form-control"
+                      placeholder="whatsapp:+14155238886"
+                    />
                   </div>
                 </div>
               </div>
