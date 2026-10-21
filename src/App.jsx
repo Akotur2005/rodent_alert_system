@@ -50,15 +50,14 @@ export default function App() {
     hourly_chart: []
   });
 
-  // Pre-defined Contact details
   const [contacts, setContacts] = useState({
-    to_email: 'koturaryan@gmail.com',
-    to_phone: '+91 7021580645',
-    smtp_user: 'koturaryan@gmail.com',
-    has_smtp_password: true,
-    smtp_configured: true,
+    to_email: '',
+    to_phone: '',
+    smtp_user: '',
+    has_smtp_password: false,
+    smtp_configured: false,
     sms_configured: false,
-    whatsapp_phone: '+917021580645',
+    whatsapp_phone: '',
     whatsapp_apikey: '',
     has_whatsapp_key: false
   });
@@ -388,11 +387,11 @@ export default function App() {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             onClick={() => {
-              setEditEmail(contacts.to_email || 'koturaryan@gmail.com');
-              setEditPhone(contacts.to_phone || '+91 7021580645');
-              setEditSmtpUser(contacts.smtp_user || contacts.to_email || 'koturaryan@gmail.com');
+              setEditEmail(contacts.to_email || '');
+              setEditPhone(contacts.to_phone || '');
+              setEditSmtpUser(contacts.smtp_user || contacts.to_email || '');
               setEditSmtpPassword('');
-              setEditWhatsappPhone(contacts.whatsapp_phone || contacts.to_phone || '+917021580645');
+              setEditWhatsappPhone(contacts.whatsapp_phone || contacts.to_phone || '');
               setEditWhatsappApiKey(contacts.whatsapp_apikey || '');
               setIsEditModalOpen(true);
             }}
@@ -893,7 +892,7 @@ export default function App() {
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
                     className="form-control"
-                    placeholder="e.g. koturaryan@gmail.com"
+                    placeholder="you@example.com"
                   />
                   <small style={{ color: '#64748b', fontSize: '0.78rem' }}>Where rodent emergency alerts will be delivered.</small>
                 </div>
@@ -922,7 +921,7 @@ export default function App() {
                       value={editSmtpUser}
                       onChange={(e) => setEditSmtpUser(e.target.value)}
                       className="form-control"
-                      placeholder="e.g. koturaryan@gmail.com"
+                      placeholder="you@example.com"
                     />
                   </div>
 
@@ -961,7 +960,7 @@ export default function App() {
                       value={editWhatsappPhone}
                       onChange={(e) => setEditWhatsappPhone(e.target.value)}
                       className="form-control"
-                      placeholder="e.g. +917021580645"
+                      placeholder="e.g. +1 555 0100"
                     />
                   </div>
 
