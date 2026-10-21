@@ -88,35 +88,27 @@ Copy `alert_config.example.json` to `alert_config.json` and fill in the
 credentials for the alert channels you want to enable. Keep this local file
 private; it and the detection history are excluded from Git.
 
-### Receive SMS Alerts
+### Receive WhatsApp Alerts
 
-SMS delivery requires a Twilio account and an SMS-capable Twilio sender number;
-entering a phone number alone cannot send text messages. Twilio may charge for
-messages, and trial accounts may only send to verified recipient numbers.
+The project uses CallMeBot to send WhatsApp alerts. It is a free third-party
+service for personal use; it is not the official WhatsApp Business API, and
+service availability and terms may change.
 
-1. Create a Twilio account, obtain its Account SID and Auth Token, and get an
-   SMS-capable Twilio phone number.
-2. Copy `alert_config.example.json` to `alert_config.json` in the project
-   folder. In `alert_config.json`, set `to_phone` to your mobile number in
-   international format (for example, `+15551234567`), and set
-   `twilio_account_sid`, `twilio_auth_token`, and `twilio_from_phone` to the
-   corresponding values from Twilio. Never share or commit this file.
-3. Start the Python backend with `python server.py`, then start the web app
-   with `npm run dev`. In the app, choose **Edit Contacts**, enter the same
-   destination in **Receiving Phone Number (for SMS)**, and save.
-4. To test delivery, send a rodent-detection request or call
-   the test endpoint from PowerShell:
+1. Start the Python backend with `python server.py`, then start the web app
+   with `npm run dev`.
+2. In the app, choose **Edit Contacts**. Under **Free WhatsApp Alerts
+   (CallMeBot)**, follow the link or add **+34 644 97 54 14** in WhatsApp and
+   send the exact message: `I allow callmebot to send me messages`.
+3. CallMeBot replies with an API key. Enter that key under **CallMeBot WhatsApp
+   API Key**, enter your own WhatsApp number under **WhatsApp Phone Number
+   (with Country Code)** in international format (for example, `+15551234567`),
+   and choose **Save & Apply Now**.
+4. Use **Image Inspector** to scan an image with a rodent and check WhatsApp
+   for the alert. The app also attempts configured email and SMS alerts;
+   WhatsApp delivery does not require Twilio.
 
-   ```powershell
-   Invoke-RestMethod -Method Post -Uri http://localhost:5001/api/test-alert
-   ```
-
-   It also attempts email and WhatsApp alerts, so configure those channels or
-   expect their results to report as unavailable/simulated.
-
-When Twilio is not configured, the backend simulates SMS delivery in its
-console; no text message is sent. WhatsApp is configured separately in **Edit
-Contacts** using the CallMeBot instructions shown in the app.
+Keep your CallMeBot API key private. It is saved in the local
+`alert_config.json`, which is excluded from Git.
 
 ## Contributing
 
