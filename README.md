@@ -85,9 +85,38 @@ npm run dev
 ## Alert Configuration
 
 Copy `alert_config.example.json` to `alert_config.json` and fill in the
-credentials and recipient details for the alert channels you want to enable.
-The local configuration and detection history are excluded from Git; do not
-commit credentials or recipient information.
+credentials for the alert channels you want to enable. Keep this local file
+private; it and the detection history are excluded from Git.
+
+### Receive SMS Alerts
+
+SMS delivery requires a Twilio account and an SMS-capable Twilio sender number;
+entering a phone number alone cannot send text messages. Twilio may charge for
+messages, and trial accounts may only send to verified recipient numbers.
+
+1. Create a Twilio account, obtain its Account SID and Auth Token, and get an
+   SMS-capable Twilio phone number.
+2. Copy `alert_config.example.json` to `alert_config.json` in the project
+   folder. In `alert_config.json`, set `to_phone` to your mobile number in
+   international format (for example, `+15551234567`), and set
+   `twilio_account_sid`, `twilio_auth_token`, and `twilio_from_phone` to the
+   corresponding values from Twilio. Never share or commit this file.
+3. Start the Python backend with `python server.py`, then start the web app
+   with `npm run dev`. In the app, choose **Edit Contacts**, enter the same
+   destination in **Receiving Phone Number (for SMS)**, and save.
+4. To test delivery, send a rodent-detection request or call
+   the test endpoint from PowerShell:
+
+   ```powershell
+   Invoke-RestMethod -Method Post -Uri http://localhost:5001/api/test-alert
+   ```
+
+   It also attempts email and WhatsApp alerts, so configure those channels or
+   expect their results to report as unavailable/simulated.
+
+When Twilio is not configured, the backend simulates SMS delivery in its
+console; no text message is sent. WhatsApp is configured separately in **Edit
+Contacts** using the CallMeBot instructions shown in the app.
 
 ## Contributing
 
