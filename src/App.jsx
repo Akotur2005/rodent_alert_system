@@ -57,17 +57,16 @@ export default function App() {
     has_smtp_password: false,
     smtp_configured: false,
     sms_configured: false,
-    whatsapp_phone: '',
-    whatsapp_apikey: '',
-    has_whatsapp_key: false
+    telegram_chat_id: '',
+    has_telegram_bot_token: false
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editSmtpUser, setEditSmtpUser] = useState('');
   const [editSmtpPassword, setEditSmtpPassword] = useState('');
-  const [editWhatsappPhone, setEditWhatsappPhone] = useState('');
-  const [editWhatsappApiKey, setEditWhatsappApiKey] = useState('');
+  const [editTelegramBotToken, setEditTelegramBotToken] = useState('');
+  const [editTelegramChatId, setEditTelegramChatId] = useState('');
   const [alertNotice, setAlertNotice] = useState(null);
 
   // Fetch initial data
@@ -128,7 +127,7 @@ export default function App() {
 
         if (data.alarm_status) {
           const em = data.alarm_status.email;
-          const wa = data.alarm_status.whatsapp;
+          const telegram = data.alarm_status.telegram;
           const sms = data.alarm_status.sms;
           let bannerMsg = `🚨 RODENT DETECTED! Siren Sounding! `;
           if (em?.status === 'sent') {
@@ -136,10 +135,10 @@ export default function App() {
           } else if (em?.status === 'error') {
             bannerMsg += `⚠️ Email error: ${em.detail} `;
           }
-          if (wa?.status === 'sent') {
-            bannerMsg += `✅ WhatsApp alert delivered! `;
-          } else if (wa?.status === 'pending_key') {
-            bannerMsg += `💬 WhatsApp ready (Activate API key). `;
+          if (telegram?.status === 'sent') {
+            bannerMsg += `✅ Telegram alert delivered! `;
+          } else if (telegram?.status === 'error') {
+            bannerMsg += `⚠️ Telegram error: ${telegram.detail} `;
           }
           if (sms?.status === 'sent') {
             bannerMsg += `✅ SMS sent to ${data.alarm_status.sent_to_phone}!`;
@@ -304,6 +303,20 @@ export default function App() {
     }
   };
 
+  const handleTestTelegram = async () => {
+    try {
+      const res = await fetch('/api/test-telegram', { method: 'POST' });
+      const data = await res.json();
+      const msg = data.telegram?.status === 'sent'
+        ? '✅ Test Telegram message sent.'
+        : `⚠️ Telegram test failed: ${data.telegram?.detail || 'Check the bot token, chat ID, and backend logs.'}`;
+      setAlertNotice(msg);
+      setTimeout(() => setAlertNotice(null), 8000);
+    } catch (err) {
+      alert('Failed to test Telegram alert: ' + err.message);
+    }
+  };
+
   // Save edited pre-defined contact details
   const handleSaveContacts = async (e) => {
     e.preventDefault();
@@ -316,15 +329,15 @@ export default function App() {
           to_phone: editPhone,
           smtp_user: editSmtpUser,
           smtp_password: editSmtpPassword,
-          whatsapp_phone: editWhatsappPhone,
-          whatsapp_apikey: editWhatsappApiKey
+          telegram_chat_id: editTelegramChatId,
+          telegram_bot_token: editTelegramBotToken
         })
       });
       if (res.ok) {
         const resData = await res.json();
         setContacts((prev) => ({ ...prev, ...resData.config }));
         setIsEditModalOpen(false);
-        setAlertNotice('✅ Alert configuration saved! Gmail, WhatsApp & Phone updated.');
+        setAlertNotice('✅ Alert configuration saved! Email, phone & Telegram settings updated.');
         setTimeout(() => setAlertNotice(null), 4500);
       }
     } catch (err) {
@@ -391,8 +404,8 @@ export default function App() {
               setEditPhone(contacts.to_phone || '');
               setEditSmtpUser(contacts.smtp_user || contacts.to_email || '');
               setEditSmtpPassword('');
-              setEditWhatsappPhone(contacts.whatsapp_phone || contacts.to_phone || '');
-              setEditWhatsappApiKey(contacts.whatsapp_apikey || '');
+              setEditTelegramChatId(contacts.telegram_chat_id || '');
+              setEditTelegramBotToken('');
               setIsEditModalOpen(true);
             }}
             className="btn btn-outline btn-sm"
@@ -419,6 +432,11 @@ export default function App() {
           <button onClick={handleTestEmail} className="btn btn-primary btn-sm">
             <Bell size={13} />
             Test Email Alert
+          </button>
+
+          <button onClick={handleTestTelegram} className="btn btn-primary btn-sm">
+            <Bell size={13} />
+            Test Telegram Alert
           </button>
         </div>
       </div>
@@ -888,7 +906,6 @@ export default function App() {
                   <label>Receiving Alert Email Address</label>
                   <input
                     type="email"
-                    required
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
                     className="form-control"
@@ -901,7 +918,6 @@ export default function App() {
                   <label>Receiving Phone Number (for SMS)</label>
                   <input
                     type="tel"
-                    required
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
                     className="form-control"
@@ -942,38 +958,43 @@ export default function App() {
 
                 <div style={{ margin: '16px 0', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
                   <h4 style={{ fontSize: '0.9rem', color: '#1e293b', marginBottom: '8px' }}>
-                    💬 Free WhatsApp Alerts (CallMeBot)
+                    ✈️ Free Telegram Alerts
                   </h4>
                   <div style={{ fontSize: '0.8rem', color: '#334155', background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                    <strong>30-Second Setup:</strong>
                     <ol style={{ margin: '6px 0 0 18px', padding: 0 }}>
-                      <li>Click <a href="https://wa.me/34644975414?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 'bold' }}>this link to open WhatsApp</a> (or add <strong>+34 644 97 54 14</strong>).</li>
-                      <li>Send: <code>I allow callmebot to send me messages</code></li>
-                      <li>Copy the <strong>APIKEY</strong> the bot sends back and paste it below!</li>
+                      <li>In Telegram, message <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">BotFather</a>, send <code>/newbot</code>, and follow its instructions. Copy the bot token it gives you.</li>
+                      <li>Open your new bot and press <strong>Start</strong> or send it a message.</li>
+                      <li>Open <code>https://api.telegram.org/bot&lt;YOUR_BOT_TOKEN&gt;/getUpdates</code> in a browser, replacing the placeholder with your token. Find <code>message.chat.id</code> in the response. Keep your token private and do not share that URL.</li>
+                      <li>Enter the chat ID and bot token below, then save. Use <strong>Test Telegram Alert</strong> to verify delivery.</li>
                     </ol>
                   </div>
 
                   <div className="form-group">
-                    <label>WhatsApp Phone Number (with Country Code)</label>
+                    <label>Telegram Chat ID</label>
                     <input
-                      type="tel"
-                      value={editWhatsappPhone}
-                      onChange={(e) => setEditWhatsappPhone(e.target.value)}
+                      type="text"
+                      value={editTelegramChatId}
+                      onChange={(e) => setEditTelegramChatId(e.target.value)}
                       className="form-control"
-                      placeholder="e.g. +1 555 0100"
+                      placeholder="e.g. 123456789"
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>CallMeBot WhatsApp API Key</label>
+                    <label>Telegram Bot Token</label>
                     <input
-                      type="text"
-                      value={editWhatsappApiKey}
-                      onChange={(e) => setEditWhatsappApiKey(e.target.value)}
+                      type="password"
+                      value={editTelegramBotToken}
+                      onChange={(e) => setEditTelegramBotToken(e.target.value)}
                       className="form-control"
-                      placeholder="e.g. 1234567"
+                      placeholder={contacts.has_telegram_bot_token ? 'Saved; leave blank to keep current token' : 'Paste the token from BotFather'}
+                      autoComplete="new-password"
                     />
-                    <small style={{ color: '#64748b', fontSize: '0.78rem' }}>Leave blank to run in simulated mode.</small>
+                    <small style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                      {contacts.has_telegram_bot_token
+                        ? 'A bot token is already saved. Leave this blank to keep it.'
+                        : 'The token is saved only in the local backend config and is not returned to the browser.'}
+                    </small>
                   </div>
                 </div>
               </div>

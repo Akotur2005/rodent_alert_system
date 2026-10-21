@@ -10,5 +10,7 @@
   "sms_enabled": false,
   "twilio_account_sid": "",
   "twilio_auth_token": "",
-  "twilio_from_phone": ""
+  "twilio_from_phone": "",
+  "telegram_bot_token": "",
+  "telegram_chat_id": ""
 }

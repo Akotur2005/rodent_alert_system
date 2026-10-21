@@ -88,27 +88,32 @@ Copy `alert_config.example.json` to `alert_config.json` and fill in the
 credentials for the alert channels you want to enable. Keep this local file
 private; it and the detection history are excluded from Git.
 
-### Receive WhatsApp Alerts
+### Receive Free Telegram Alerts
 
-The project uses CallMeBot to send WhatsApp alerts. It is a free third-party
-service for personal use; it is not the official WhatsApp Business API, and
-service availability and terms may change.
+Telegram bots can message you for free. This project sends alerts through the
+official Telegram Bot API; you need a Telegram account and internet access.
 
 1. Start the Python backend with `python server.py`, then start the web app
    with `npm run dev`.
-2. In the app, choose **Edit Contacts**. Under **Free WhatsApp Alerts
-   (CallMeBot)**, follow the link or add **+34 644 97 54 14** in WhatsApp and
-   send the exact message: `I allow callmebot to send me messages`.
-3. CallMeBot replies with an API key. Enter that key under **CallMeBot WhatsApp
-   API Key**, enter your own WhatsApp number under **WhatsApp Phone Number
-   (with Country Code)** in international format (for example, `+15551234567`),
-   and choose **Save & Apply Now**.
-4. Use **Image Inspector** to scan an image with a rodent and check WhatsApp
-   for the alert. The app also attempts configured email and SMS alerts;
-   WhatsApp delivery does not require Twilio.
+2. In Telegram, open [@BotFather](https://t.me/BotFather), send `/newbot`, and
+   follow the prompts. Copy the bot token it gives you.
+3. Open your new bot using its username and press **Start** or send it a
+   message.
+4. To find your chat ID, open
+   `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates` in a browser,
+   replacing `<YOUR_BOT_TOKEN>` with your token. Find `message.chat.id` in the
+   JSON response. Keep this URL private because it contains your bot token.
+5. In RodentSentinel, choose **Edit Contacts**. Enter the chat ID and bot token
+   in the Telegram fields, then select **Save & Apply Now**. The token is saved
+   in local `alert_config.json`, excluded from Git, and never returned by the
+   backend config API.
+6. Select **Test Telegram Alert** to verify delivery, or scan an image that
+   contains a rodent in **Image Inspector**.
 
-Keep your CallMeBot API key private. It is saved in the local
-`alert_config.json`, which is excluded from Git.
+If `getUpdates` has no messages, send another message to your bot and refresh
+the URL. A Telegram bot cannot start a private conversation until you start
+it first. The phone number field is for optional SMS via Twilio; it is not
+needed for Telegram.
 
 ## Contributing
 
