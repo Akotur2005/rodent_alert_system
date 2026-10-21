@@ -1,0 +1,11 @@
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
+
+.env
+.env.*
+!.env.example
+
+alert_config.json
+detection_history.json
